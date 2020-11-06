@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,38 +10,36 @@
 #include <sys/stat.h>
 
 int find_ext( char *ext ) {
-    int mult = 1;
+    int multi = 1;
     if ( !strcmp( ext, "bb" ))
-        mult = 512;
+        multi = 512;
     else if ( !strcmp( ext, "K" ))
-        mult = 1024;
-    else if(!strcmp( ext, "B" ))
-        mult = 1;
-    else{
-        printf("Wrong number ext");
-        exit(-2);
+        multi = 1024;
+    else if ( !strcmp( ext, "B" ))
+        multi = 1;
+    else {
+        printf( "Wrong number ext" );
+        exit( -2 );
     }
-    return mult;
+    return multi;
 }
 
-void parse_direction(char *direction, char* size, long int *exp_size_after, long int *exp_size_before){
+void parse_direction( char *direction, char *size, long int *exp_size_after, long int *exp_size_before ) {
     char *ext;
     if ( !strcmp( direction, "ambo" )) {
         *exp_size_before = strtol( size, &ext, 0 );
         *exp_size_after = strtol( size, &ext, 0 );
-        *exp_size_after *= find_ext(ext);
-        *exp_size_before *= find_ext(ext);
-    } else if ( !strcmp( direction, "ante" )){
+        *exp_size_after *= find_ext( ext );
+        *exp_size_before *= find_ext( ext );
+    } else if ( !strcmp( direction, "ante" )) {
         *exp_size_before = strtol( size, &ext, 0 );
-        *exp_size_before *= find_ext(ext);
-    }
-    else if (( !strcmp( direction, "post" ))){
+        *exp_size_before *= find_ext( ext );
+    } else if (( !strcmp( direction, "post" ))) {
         *exp_size_after = strtol( size, &ext, 0 );
-        *exp_size_after *= find_ext(ext);
-    }
-    else {
+        *exp_size_after *= find_ext( ext );
+    } else {
         printf( "Wrong argument" );
-        exit(-3);
+        exit( -3 );
     }
 }
 
@@ -47,7 +47,7 @@ int main( int argc, char **argv ) {
 
     int option;
     char *file_path;
-    while (( option = getopt( argc, argv, "s:f:" )) != -1 ) {
+    while (( option = getopt( argc, argv, "s:" )) != -1 ) {
         if ( option == 's' )
             file_path = optarg;
         else {
@@ -62,31 +62,84 @@ int main( int argc, char **argv ) {
     }
 
     long int exp_size_before = 0;
-    long int exp_size_after=0;
-    long int *p_exp_size_before=&exp_size_before;
-    long int *p_exp_size_after=&exp_size_after;
+    long int exp_size_after = 0;
+    long int *p_exp_size_before = &exp_size_before;
+    long int *p_exp_size_after = &exp_size_after;
 
     //input string split
-    char *ext;
     char *input_str = argv[ optind ];
     char *direction = strtok( input_str, ":" );
     char *size = strtok(NULL, ":" );
-    parse_direction(direction, size, p_exp_size_after, p_exp_size_before);
+    parse_direction( direction, size, p_exp_size_after, p_exp_size_before );
 
     if (( !strcmp( direction, "ante" ) || !strcmp( direction, "post" )) && argc == 5 ) {
         optind++;
         char *input_str2 = argv[ optind ];
         char *direction2 = strtok( input_str2, ":" );
         char *size2 = strtok(NULL, ":" );
-        parse_direction(direction2, size2, p_exp_size_after, p_exp_size_before);
+        parse_direction( direction2, size2, p_exp_size_after, p_exp_size_before );
     }
 
     //open file and get it's size
-    file_path = argv[ optind ];
     int file = open( file_path, O_RDONLY );
     struct stat buf;
     fstat( file, &buf );
     off_t file_size = buf.st_size;
+
+    off_t offset_current = 0;
+    off_t offset_hole = 0;
+    off_t offset_data = 0;
+    off_t offset_data_e[3];
+    for ( int i = 0; i < 3; i++ )
+        offset_data_e[ i ] = 0;
+
+    off_t size_current_data_block = 0;
+    for ( ; size_current_data_block < file_size; ) {
+        int index = 1;
+        while ( index != 3 ) {
+            offset_data = lseek( file, offset_current, SEEK_DATA );
+            if ( offset_data == -1 ) { // skończyły sie dane
+                offset_data_e[ 2 ] = file_size;
+                break;
+            }
+            offset_hole = lseek( file, offset_data, SEEK_HOLE );
+            size_current_data_block = offset_hole - offset_data;
+
+            char *data = ( char * ) calloc( size_current_data_block, sizeof( char ));
+            lseek( file, offset_data, SEEK_SET );
+            int red = read( file, data, size_current_data_block );
+            if ( red == -1 )
+                perror( "Error during read" );
+
+            for ( int i = 0; i < size_current_data_block; i++ ) {
+                printf( "%c", data[ i ] );
+                if (( int ) data[ i ] > 0 ) {
+                    offset_data_e[ index ] = offset_data + i;
+//                    offset_current = offset_data + i;
+                    index++;
+                }
+
+                if ( index == 3 ) {
+                    offset_current = offset_data + i;
+                    break;
+                }
+            }
+
+            if ( index != 3 )
+                offset_current = offset_hole;
+        }
+
+        //TODO dopisywanie danych
+
+        if ( offset_data_e[ 2 ] == file_size )
+            break;
+
+        //przesuwamy dane
+        offset_data_e[ 0 ] = offset_data_e[ 1 ];
+        offset_data_e[ 1 ] = offset_data_e[ 2 ];
+        offset_current = offset_data_e[ 1 ];
+
+    }
 
     return 0;
 }
