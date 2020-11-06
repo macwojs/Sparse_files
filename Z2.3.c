@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <string.h>
 
 
 int main( int argc, char **argv ) {
@@ -24,7 +25,7 @@ int main( int argc, char **argv ) {
     while (( option = getopt( argc, argv, "!" )) != -1 ) {
         switch ( option ) {
             case '!':
-                write_as_null = 0;
+                write_as_null = 0;l
                 break;
             default:
                 printf( "Wrong input option" );
@@ -42,7 +43,7 @@ int main( int argc, char **argv ) {
     off_t size = buf.st_size;
 
     off_t offset_current = 0;
-    for ( offset_current = 0; offset_current < size; ) {
+    for ( ; offset_current < size; ) {
         off_t offset_data = lseek( plik, offset_current, SEEK_DATA );
         if ( offset_data == -1 ) {   //skonczyly sie dane
             offset_data = size;
@@ -68,13 +69,15 @@ int main( int argc, char **argv ) {
         if ( offset_data != offset_hole ) {
             off_t data_block_size = offset_hole - offset_current;
             char *data = ( char * ) calloc( data_block_size, sizeof( char ));
-            lseek( plik, 0, SEEK_SET );
+            lseek( plik, offset_current, SEEK_SET );
             int red = read( plik, data, data_block_size );
             if ( red == -1 )
                 perror( "Error during read" );
 
             off_t count_data = 1;
             for ( int i = 1; i < data_block_size; i++ ) {
+                char c2 = data[ i ];
+                char c1 = data[ i - 1 ];
                 if ( data[ i ] == data[ i - 1 ] )
                     count_data++;
                 else {
@@ -85,6 +88,8 @@ int main( int argc, char **argv ) {
             }
             printf( "%c\t\t %ld\n", data[ data_block_size - 1 ], count_data );
             count_printed_data += count_data;
+
+            memset(data, 0, data_block_size);
         }
         offset_current = offset_hole;
     }
