@@ -10,14 +10,20 @@
 #include <sys/stat.h>
 #include <string.h>
 
+void print_data( bool write_as_null, off_t volume, char data ) {
+    if (( int ) data == -1 ) {
+        if ( write_as_null )
+            printf( "<NULL>\t %ld\n", volume );
+        else
+            printf( "0\t\t %ld\n", volume );
+    } else if (( int ) data > 32 && ( int ) data < 127 )
+        printf( "%c\t %ld\n", data, volume );
+    else
+        printf( "%d\t %ld\n", ( int ) data, volume );
+}
 
 int main( int argc, char **argv ) {
-
-    off_t count_printed_data = 0;
-
-    time_t t;
-    srand(( unsigned ) time( &t ));
-
+//    off_t count_printed_data = 0;
     int option;
     bool write_as_null = 1;
     char *file_path;
@@ -25,7 +31,7 @@ int main( int argc, char **argv ) {
     while (( option = getopt( argc, argv, "!" )) != -1 ) {
         switch ( option ) {
             case '!':
-                write_as_null = 0;l
+                write_as_null = 0;
                 break;
             default:
                 printf( "Wrong input option" );
@@ -45,20 +51,15 @@ int main( int argc, char **argv ) {
     off_t offset_current = 0;
     for ( ; offset_current < size; ) {
         off_t offset_data = lseek( plik, offset_current, SEEK_DATA );
-        if ( offset_data == -1 ) {   //skonczyly sie dane
+        if ( offset_data == -1 )    //skonczyly sie dane
             offset_data = size;
-        }
 
         if ( offset_data != 0 ) {
-            if ( write_as_null )
-                printf( "<NULL>\t %ld\n", offset_data - offset_current );
-            else
-                printf( "0\t\t %ld\n", offset_data - offset_current );
+            print_data( write_as_null, offset_data - offset_current, ( char ) -1 );
+//            count_printed_data += offset_data - offset_current;
 
-            count_printed_data +=offset_data - offset_current;
-
-            if ( offset_data == size ){
-                printf("Wypisano %ld z %ld", count_printed_data, size);
+            if ( offset_data == size ) {
+//                printf( "Wypisano %ld z %ld", count_printed_data, size );
                 return 0;
             }
         }
@@ -76,24 +77,22 @@ int main( int argc, char **argv ) {
 
             off_t count_data = 1;
             for ( int i = 1; i < data_block_size; i++ ) {
-                char c2 = data[ i ];
-                char c1 = data[ i - 1 ];
                 if ( data[ i ] == data[ i - 1 ] )
                     count_data++;
                 else {
-                    printf( "%c\t\t %ld\n", data[ i - 1 ], count_data );
-                    count_printed_data += count_data;
+                    print_data( write_as_null, count_data, data[ i - 1 ] );
+//                    count_printed_data += count_data;
                     count_data = 1;
                 }
             }
-            printf( "%c\t\t %ld\n", data[ data_block_size - 1 ], count_data );
-            count_printed_data += count_data;
+            print_data( write_as_null, count_data, data[ data_block_size - 1 ] );
+//            count_printed_data += count_data;
 
-            memset(data, 0, data_block_size);
+            memset( data, 0, data_block_size );
         }
         offset_current = offset_hole;
     }
 
-    printf("Wypisano %ld z %ld", count_printed_data, size);
+//    printf( "Wypisano %ld z %ld", count_printed_data, size );
     return 0;
 }
