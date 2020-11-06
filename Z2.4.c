@@ -81,6 +81,12 @@ int main( int argc, char **argv ) {
         parse_direction(direction2, size2, p_exp_size_after, p_exp_size_before);
     }
 
+    //open file and get it's size
+    file_path = argv[ optind ];
+    int file = open( file_path, O_RDONLY );
+    struct stat buf;
+    fstat( file, &buf );
+    off_t file_size = buf.st_size;
 
     return 0;
 }
