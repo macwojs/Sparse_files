@@ -1,12 +1,10 @@
 #define _GNU_SOURCE
-
 #include <getopt.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <time.h>
 #include <sys/stat.h>
 #include <string.h>
 
@@ -17,9 +15,9 @@ void print_data( bool write_as_null, off_t volume, char data ) {
         else
             printf( "0\t\t %ld\n", volume );
     } else if (( int ) data > 32 && ( int ) data < 127 )
-        printf( "%c\t %ld\n", data, volume );
+        printf( "%c\t\t %ld\n", data, volume );
     else
-        printf( "%d\t %ld\n", ( int ) data, volume );
+        printf( "%d\t\t %ld\n", ( int ) data, volume );
 }
 
 int main( int argc, char **argv ) {
@@ -29,14 +27,10 @@ int main( int argc, char **argv ) {
     char *file_path;
 
     while (( option = getopt( argc, argv, "!" )) != -1 ) {
-        switch ( option ) {
-            case '!':
-                write_as_null = 0;
-                break;
-            default:
-                printf( "Wrong input option" );
-                break;
-        }
+        if ( option=='!' )
+            write_as_null = 0;
+        else
+            printf( "Wrong input option" );
     }
 
     // open file

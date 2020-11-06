@@ -57,7 +57,7 @@ int main( int argc, char **argv ) {
 
     int f = open( file_path, O_WRONLY | O_NONBLOCK );
     struct stat buf;
-    fstat(f, &buf);
+    fstat( f, &buf );
     off_t file_size = buf.st_size;
 
     long long int current_size = 0;
@@ -96,7 +96,7 @@ int main( int argc, char **argv ) {
         optind++;
     }
 
-    close(f);
+    close( f );
 }
 
 
