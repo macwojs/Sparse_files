@@ -15,7 +15,7 @@ int find_ext( char *ext ) {
         multi = 512;
     else if ( !strcmp( ext, "K" ))
         multi = 1024;
-    else if ( !strcmp( ext, "B" ))
+    else if ( !strcmp( ext, "B" ) || ( int ) ext[ 0 ] == 0 )
         multi = 1;
     else {
         printf( "Wrong number ext" );
@@ -80,8 +80,17 @@ int main( int argc, char **argv ) {
         parse_direction( direction2, size2, p_exp_size_after, p_exp_size_before );
     }
 
+    double proportion_for_before = 1;
+    double proportion_for_after = 1;
+    if ( exp_size_before != 0 && exp_size_after != 0 ) {
+        proportion_for_before = ( double ) exp_size_before / (( double ) exp_size_after + ( double ) exp_size_before );
+        proportion_for_after = 1 - proportion_for_before;
+    }
+
+    long int exp_size_total = exp_size_after + exp_size_before;
+
     //open file and get it's size
-    int file = open( file_path, O_RDONLY );
+    int file = open( file_path, O_RDWR );
     struct stat buf;
     fstat( file, &buf );
     off_t file_size = buf.st_size;
@@ -93,6 +102,7 @@ int main( int argc, char **argv ) {
     for ( int i = 0; i < 3; i++ )
         offset_data_e[ i ] = 0;
 
+    char current_char;
     off_t size_current_data_block = 0;
     for ( ; size_current_data_block < file_size; ) {
         int index = 1;
@@ -112,9 +122,10 @@ int main( int argc, char **argv ) {
                 perror( "Error during read" );
 
             for ( int i = 0; i < size_current_data_block; i++ ) {
-                printf( "%c", data[ i ] );
                 if (( int ) data[ i ] > 0 ) {
                     offset_data_e[ index ] = offset_data + i;
+                    if(index==1)
+                        current_char = data[i];
 //                    offset_current = offset_data + i;
                     index++;
                 }
@@ -127,9 +138,92 @@ int main( int argc, char **argv ) {
 
             if ( index != 3 )
                 offset_current = offset_hole;
+
+//            free(data);
         }
 
         //TODO dopisywanie danych
+        long int place_before = offset_data_e[ 1 ] - offset_data_e[ 0 ];
+        long int place_after = offset_data_e[ 2 ] - offset_data_e[ 1 ];
+
+//        char *current_char = malloc( 64 );
+//        lseek( file, offset_data_e[ 1 ], SEEK_SET );
+//        int red = read( file, current_char, size_current_data_block );
+//        if ( red == -1 )
+//            perror( "Error during read" );
+
+        if ( offset_data_e[ 0 ] == 0 ) { //uwaga na przod
+            printf( "Case 1" );
+            if ( place_before > exp_size_before )
+                place_before = exp_size_before;
+
+            if ( place_after < exp_size_total )
+                place_after = ( long int ) (( double ) place_after * proportion_for_before );
+            else
+                place_after = exp_size_after;
+
+            lseek( file, offset_data_e[ 1 ] - place_before, SEEK_SET );
+            for ( int i = 0; i < place_before; i++ ) {
+                int numWritten = write( file, &current_char, 1 );
+                if ( numWritten == -1 )
+                    perror( "write" );
+            }
+            lseek( file, offset_data_e[ 1 ] + 1, SEEK_SET );
+            for ( int i = 0; i < place_after; i++ ) {
+                int numWritten = write( file, &current_char, 1 );
+                if ( numWritten == -1 )
+                    perror( "write" );
+            }
+
+        } else if ( offset_data_e[ 2 ] == file_size ) { //uwaga na tyl
+            printf( "Case 2" );
+
+            if ( place_before < exp_size_total )
+                place_before = ( long int ) (( double ) place_before * proportion_for_before );
+            else
+                place_before = exp_size_before;
+
+            if ( place_after > exp_size_after )
+                place_after = exp_size_after;
+
+            lseek( file, offset_data_e[ 1 ] - place_before, SEEK_SET );
+            for ( int i = 0; i < place_before; i++ ) {
+                int numWritten = write( file, &current_char, 1 );
+                if ( numWritten == -1 )
+                    perror( "write" );
+            }
+            lseek( file, offset_data_e[ 1 ] + 1, SEEK_SET );
+            for ( int i = 0; i < place_after; i++ ) {
+                int numWritten = write( file, &current_char, 1 );
+                if ( numWritten == -1 )
+                    perror( "write" );
+            }
+
+        } else { //norma
+            printf( "Case 3" );
+            if ( place_before < exp_size_total )
+                place_before = ( long int ) (( double ) place_before * proportion_for_before );
+            else
+                place_before = exp_size_before;
+
+            if ( place_after < exp_size_total )
+                place_after = ( long int ) (( double ) place_after * proportion_for_before );
+            else
+                place_after = exp_size_after;
+
+            lseek( file, offset_data_e[ 1 ] - place_before, SEEK_SET );
+            for ( int i = 0; i < place_before; i++ ) {
+                int numWritten = write( file, &current_char, 1 );
+                if ( numWritten == -1 )
+                    perror( "write" );
+            }
+            lseek( file, offset_data_e[ 1 ] + 1, SEEK_SET );
+            for ( int i = 0; i < place_after; i++ ) {
+                int numWritten = write( file, &current_char, 1 );
+                if ( numWritten == -1 )
+                    perror( "write" );
+            }
+        }
 
         if ( offset_data_e[ 2 ] == file_size )
             break;
