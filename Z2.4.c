@@ -160,7 +160,6 @@ int main( int argc, char **argv ) {
 //            free(data);
         }
 
-        //TODO dopisywanie danych
         long int place_before = offset_data_e[ 1 ] - offset_data_e[ 0 ];
         long int place_after = offset_data_e[ 2 ] - offset_data_e[ 1 ];
 
