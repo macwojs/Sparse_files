@@ -17,7 +17,7 @@ long long int rand_position( long long int max_size, int8_t *tab ) {
 }
 
 void write_to_file( int *f, long long int pos, int8_t *data ) {
-    int a = lseek( *f, pos, SEEK_SET );
+    lseek( *f, pos, SEEK_SET );
     int numWritten = write( *f, data, 1 );
     if ( numWritten == -1 )
         perror( "write" );
